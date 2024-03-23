@@ -9,6 +9,8 @@ pdf2image = "*"
 langchain = "*"
 langchain-google-vertexai = "*"
 configparser = "*"
+streamlit = "*"
+streamlit-js-eval = "*"
 
 [dev-packages]
 
