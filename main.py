@@ -17,7 +17,7 @@ REGION="EU"
 if __name__== "__main__":
 
     ### Check if collection exists in the config.ini ###
-    NAME_COLLECTION = "second_embedding"
+    NAME_COLLECTION = "first_embedding"
     collection_name =config_helper.get_config_value ("COLLECTION", "name")
     if (collection_name is None) or  (NAME_COLLECTION not in collection_name):
         collection_name = f"{NAME_COLLECTION},{collection_name} "
@@ -38,11 +38,21 @@ if __name__== "__main__":
 
     ### Extract JSON from the table in images ###
     dir_list:list[str] = os.listdir(f"{file_path_directory}/images")
-    #json_values:list[str] = []
-    #metadatas:list[str] = []
-    for file in dir_list:
-        json_values = multimodal_infer.extract_table_to_json_from_image(f"{file_path_directory}/images/{file}")
-        embedding_store.add_texts([json_values], metadatas = [f"{file_path_directory}/images/{file}"])
+    json_values:list[str] = []
+    metadatas:list[str] = []
+    for count, file in enumerate(dir_list):
+        json_values.append (multimodal_infer.extract_table_to_json_from_image(f"{file_path_directory}/images/{file}"))
+        metadatas.append (f"{file_path_directory}/images/{file}")
+
+        # Calculate and store embedding every 15 inferences (we don't want to risk a OOM)
+        if (len(json_values) % 20) == 0 or len(dir_list) == (count+1):
+            embedding_store.add_texts(json_values, metadatas=metadatas)
+            json_values.clear()
+            metadatas.clear ()
+
+    print("DONE !!!")
+
+
         
     
     
