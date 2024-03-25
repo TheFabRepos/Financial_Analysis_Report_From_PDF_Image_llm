@@ -1,7 +1,7 @@
 import streamlit as st
 
 from pdf_engineering import pdf_table_to_img
-from generic_helper import filesystem_helper
+from generic_helper import filesystem_helper, config_helper
 
 from llm_infer import multimodal_infer
 from streamlit_js_eval import streamlit_js_eval
@@ -9,6 +9,7 @@ from streamlit_js_eval import streamlit_js_eval
 import json
 from embedding_core import bq_embedding
 import time
+import os
 
 
 def process_file():
@@ -30,7 +31,39 @@ def process_file():
     with st.spinner(text = "Convert pages with table to images..."):
       for count, page in enumerate(list_page_table):
         pdf_table_to_img.convert_ppm_to_file (list_images[page], f"{st.session_state.temp_directory}/images/page_{page}.jpg")
-        progressbar.progress((0.5 + (count/len(list_page_table))*0.25) , text = "JSON extracted from tables found in PDF file...")
+        progressbar.progress((0.5 + (count/len(list_page_table))*0.25) , text = "Saving tables found in PDF file to image...")
+
+
+    ### Getting the embedding_store to store the vectors
+    BQ_PROJECT_ID = config_helper.get_config_value ("GENERAL", "project_id")
+    BQ_DS_NAME = config_helper.get_config_value ("GENERAL", "bq_ds_name")
+    REGION = config_helper.get_config_value ("GENERAL", "region_ds")
+    embedding_store = bq_embedding.create_embedding_collection(BQ_PROJECT_ID, BQ_DS_NAME, st.session_state.collection_name ,REGION)
+
+    ### Extract JSON from the table in images ###
+    dir_list:list[str] = os.listdir(f"{st.session_state.temp_directory}/images")
+    json_values:list[str] = []
+    metadatas:list[str] = []
+    
+    ### Extract the JSON from the image and embed it
+    with st.spinner(text = "Extract json from image and embed it..."):
+      for count, file in enumerate(dir_list):
+          json_values.append (multimodal_infer.extract_table_to_json_from_image(f"{st.session_state.temp_directory}/images/{file}"))
+          metadatas.append (f"{st.session_state.temp_directory}/images/{file}")
+
+          # Calculate and store embedding every 10 inferences (we don't want to risk a OOM)
+          if (len(json_values) % 10) == 0 or len(dir_list) == (count+1):
+              embedding_store.add_texts(json_values, metadatas=metadatas)
+              json_values.clear()
+              metadatas.clear ()
+          progressbar.progress((0.75 + (count/len(dir_list))*0.25) , text = "Extracting and embedding JSON...")
+
+    ### Write the configuration to config file
+    collection_name =config_helper.get_config_value ("COLLECTION", "name")
+    if (collection_name is None) or  (st.session_state.collection_name not in collection_name):
+        collection_name = f"{st.session_state.collection_name},{collection_name} "
+        config_helper.write_config("COLLECTION", "name", collection_name)
+    config_helper.write_config("COLLECTION", st.session_state.collection_name, st.session_state.temp_directory)
 
     #  extract_info.extract_json_from_table_with_iteration (list_page_table, list_images, st.session_state.temp_directory, st.session_state.filename_with_extension, logtxtbox)
     # progressbar.progress(0.75, text = "JSON extracted from tables found in PDF file...")
@@ -85,7 +118,7 @@ if st.session_state.uploaded_already == False:
         
         # create temp local directory to store teh resulting json file
         st.session_state.temp_directory = filesystem_helper.create_tmp_directory (filename_only)
-        print(st.session_state.temp_directory)
+        print(f"Directory: {st.session_state.temp_directory}")
         with open(f"{st.session_state.temp_directory}/{st.session_state.filename_with_extension}", "wb") as f:
             f.write(bytes_data)
         st.session_state.uploaded_already = True
