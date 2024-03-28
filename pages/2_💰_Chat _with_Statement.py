@@ -1,9 +1,13 @@
 from typing import Set
 import os
 from langchain_google_vertexai import VertexAIEmbeddings
-from retrieve_pgvector import rag_pgvector
+from generic_helper import config_helper
+#from retrieve_pgvector import rag_pgvector
+from embedding_core import bq_similarity
 import streamlit as st
 from streamlit_chat import message
+
+
 
 
 def create_sources_string(source_urls: Set[str]) -> str:
@@ -17,28 +21,39 @@ def create_sources_string(source_urls: Set[str]) -> str:
     return sources_string
 
 #pgvector_retrieval = rag_pgvector.PG_Vector_RAG(collection_name=st.session_state.choice_collection)
-pgvector_retrieval = rag_pgvector.PG_Vector_RAG(collection_name="Google_2022")
+#pgvector_retrieval = rag_pgvector.PG_Vector_RAG(collection_name="Google_2022")
 
+### Getting the embedding_store to query against vector store
+BQ_PROJECT_ID = config_helper.get_config_value ("GENERAL", "project_id")
+BQ_DS_NAME = config_helper.get_config_value ("GENERAL", "bq_ds_name")
+REGION = config_helper.get_config_value ("GENERAL", "region_ds")
+COLLECTION_NAME = "text_tableembed"
+PATH = config_helper.get_config_value ("GENERAL", f"{COLLECTION_NAME}")
+ 
 
 st.header("Chat with your statement 💰 - Helper Bot")
-if (
-    "chat_answers_history" not in st.session_state
-    and "user_prompt_history" not in st.session_state
-    and "chat_history" not in st.session_state
-):
-    st.session_state["chat_answers_history"] = []
-    st.session_state["user_prompt_history"] = []
-    st.session_state["chat_history"] = []
+# if (
+#     "chat_answers_history" not in st.session_state
+#     and "user_prompt_history" not in st.session_state
+#     and "chat_history" not in st.session_state
+# ):
+#     st.session_state["chat_answers_history"] = []
+#     st.session_state["user_prompt_history"] = []
+#     st.session_state["chat_history"] = []
 
 
 prompt = st.text_input("Prompt", placeholder="Enter your message here...") or st.button("Submit")
 
 if prompt:
     with st.spinner("Generating response..."):
+        sourceImage = f"{PATH}/images/{bq_similarity.similarity_search(BQ_PROJECT_ID, BQ_DS_NAME, COLLECTION_NAME, prompt, 1 )}"
+        
+        
         generated_response = rag_pgvector.run_llm(
                 pgvector_retrieval = pgvector_retrieval,
                 query=prompt, chat_history=st.session_state["chat_history"]
                 )
+        
 
         sources = set(
             [os.path.basename(doc.metadata["source"]) for doc in generated_response["source_documents"]]

@@ -29,7 +29,7 @@ def extract_table_to_json_from_image(image_uri: str) -> str:
 
     model = GenerativeModel(MULTIMODAL_MODEL)
 
-    prompt = "Extract all the possible information for every single table in JSON format with year and month to which it applies to."
+    prompt = "Extract all the possible information for every single table in text format, it's imperative to get year and month to which the extracted data applies to. If the month and year cannot be found in the table directly get the month and year form the text surroundung the table."
 
     imageContent = Part.from_image(Image.load_from_file(image_uri))
 
@@ -49,7 +49,11 @@ def extract_table_to_json_from_image(image_uri: str) -> str:
     
     responses = list(responses)
     final_response = ""
-    for response in responses:
-        final_response = final_response + response.candidates[0].content.parts[0].text
-    
+    try:
+        for response in responses:
+            final_response = final_response + response.candidates[0].content.parts[0].text
+    except IndexError as e:
+        print(f"Exception has occured: {e}")
+        return final_response
+
     return final_response

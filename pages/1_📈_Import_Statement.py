@@ -28,10 +28,10 @@ def process_file():
     progressbar.progress(0.5, text = "Pages in PDF file has been converted to images ...")
     
     ### Save the page with table in the PDF files as image ###
-    with st.spinner(text = "Convert pages with table to images..."):
+    with st.spinner(text = "Convert images of pages with table to jpeg file..."):
       for count, page in enumerate(list_page_table):
         pdf_table_to_img.convert_ppm_to_file (list_images[page], f"{st.session_state.temp_directory}/images/page_{page}.jpg")
-        progressbar.progress((0.5 + (count/len(list_page_table))*0.25) , text = "Saving tables found in PDF file to image...")
+        progressbar.progress((0.5 + (count/len(list_page_table))*0.25) , text = "Saving tables found in PDF file to jpg...")
 
 
     ### Getting the embedding_store to store the vectors
@@ -49,8 +49,8 @@ def process_file():
     with st.spinner(text = "Extract json from image and embed it..."):
       for count, file in enumerate(dir_list):
           json_values.append (multimodal_infer.extract_table_to_json_from_image(f"{st.session_state.temp_directory}/images/{file}"))
-          metadatas.append (f"{st.session_state.temp_directory}/images/{file}")
-
+          #metadatas.append (f"{st.session_state.temp_directory}/images/{file}")
+          metadatas.append (f"{file}")
           # Calculate and store embedding every 10 inferences (we don't want to risk a OOM)
           if (len(json_values) % 10) == 0 or len(dir_list) == (count+1):
               embedding_store.add_texts(json_values, metadatas=metadatas)
@@ -64,13 +64,6 @@ def process_file():
         collection_name = f"{st.session_state.collection_name},{collection_name} "
         config_helper.write_config("COLLECTION", "name", collection_name)
     config_helper.write_config("COLLECTION", st.session_state.collection_name, st.session_state.temp_directory)
-
-    #  extract_info.extract_json_from_table_with_iteration (list_page_table, list_images, st.session_state.temp_directory, st.session_state.filename_with_extension, logtxtbox)
-    # progressbar.progress(0.75, text = "JSON extracted from tables found in PDF file...")
-
-    # with st.spinner(text = "Embedding extracted json..."):
-    #   pgvector_embedding.embed_file_in_path (f"{st.session_state.temp_directory}/json", st.session_state.collection_name)
-    # progressbar.progress(0.999, text = f"JSON has been embedded...")
 
     # Evertything is success, we celabrate
     st.snow()
@@ -98,12 +91,7 @@ if 'uploaded_already' not in st.session_state:
          st.session_state.collection_name = ""
          st.session_state.buttonClicked = False
 
-
 uploaded_file = file_uploader.file_uploader("Choose a PDF file", accept_multiple_files=False, type=['pdf'])
-
-# print(uploaded_file)
-
-#uploaded_file:str = st.file_uploader("Choose a PDF file", accept_multiple_files=False, type=['pdf'], key='uploader_key', disabled=st.session_state.file_uploader_disabled)
 
 if st.session_state.uploaded_already == False:
     if uploaded_file is not None:

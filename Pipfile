@@ -11,6 +11,7 @@ langchain-google-vertexai = "*"
 configparser = "*"
 streamlit = "*"
 streamlit-js-eval = "*"
+streamlit-chat = "*"
 
 [dev-packages]
 
