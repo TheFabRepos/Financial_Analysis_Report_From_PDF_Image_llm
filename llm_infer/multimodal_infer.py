@@ -15,7 +15,7 @@ MULTIMODAL_MODEL = config_helper.get_config_value("GENERAL", "multimodal_model")
 # Extract table to json format from the image URI.
 
 
-def extract_table_to_json_from_image(image_uri: str) -> str:
+def extract_table_to_json_from_image(image_uri:str) -> str:
     """
     Extract table to json format from the image URI.
 
@@ -26,16 +26,51 @@ def extract_table_to_json_from_image(image_uri: str) -> str:
         Json for every table in the image.
     """
     
-
     model = GenerativeModel(MULTIMODAL_MODEL)
-
     prompt = "Extract all the possible information for every single table in text format, it's imperative to get year and month to which the extracted data applies to. If the month and year cannot be found in the table directly get the month and year form the text surroundung the table."
-
     imageContent = Part.from_image(Image.load_from_file(image_uri))
 
     contents = [
         imageContent,
         prompt,
+    ]
+    responses = model.generate_content(
+        contents,  
+        generation_config={
+            "max_output_tokens": 2048,
+            "temperature": 0,
+            "top_p": 1,
+            "top_k": 1
+            },
+        stream=True)
+    
+    responses = list(responses)
+    final_response = ""
+    try:
+        for response in responses:
+            final_response = final_response + response.candidates[0].content.parts[0].text
+    except IndexError as e:
+        print(f"Exception has occured: {e}")
+        return final_response
+
+    return final_response
+
+def get_response_from_image(prompt:str, image_uri:str) -> str:
+    model = GenerativeModel(MULTIMODAL_MODEL)
+    imageContent = Part.from_image(Image.load_from_file(image_uri))
+
+    final_prompt = f""" [Context] 
+        You are a helpful assistant specialized in financial statement analysis. You will always think step by step.
+        Based on the provided file, answer query from the user in plain english and summarize in a table. Gives as much detail as possible.
+    [Query]
+        {prompt}
+    [Output]
+        Provide the result in a table whenever appropriate.
+    """
+
+    contents = [
+        imageContent,
+        final_prompt
     ]
     responses = model.generate_content(
         contents,  

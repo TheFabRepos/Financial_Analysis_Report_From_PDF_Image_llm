@@ -1,11 +1,12 @@
 from typing import Set
 import os
-from langchain_google_vertexai import VertexAIEmbeddings
+# from langchain_google_vertexai import VertexAIEmbeddings
 from generic_helper import config_helper
 #from retrieve_pgvector import rag_pgvector
 from embedding_core import bq_similarity
 import streamlit as st
 from streamlit_chat import message
+from llm_infer import multimodal_infer
 
 
 
@@ -28,7 +29,7 @@ BQ_PROJECT_ID = config_helper.get_config_value ("GENERAL", "project_id")
 BQ_DS_NAME = config_helper.get_config_value ("GENERAL", "bq_ds_name")
 REGION = config_helper.get_config_value ("GENERAL", "region_ds")
 COLLECTION_NAME = "text_tableembed"
-PATH = config_helper.get_config_value ("GENERAL", f"{COLLECTION_NAME}")
+PATH = config_helper.get_config_value ("COLLECTION", f"{COLLECTION_NAME}")
  
 
 st.header("Chat with your statement 💰 - Helper Bot")
@@ -46,33 +47,36 @@ prompt = st.text_input("Prompt", placeholder="Enter your message here...") or st
 
 if prompt:
     with st.spinner("Generating response..."):
+
         sourceImage = f"{PATH}/images/{bq_similarity.similarity_search(BQ_PROJECT_ID, BQ_DS_NAME, COLLECTION_NAME, prompt, 1 )}"
+        generated_response = multimodal_infer.get_response_from_image(prompt, sourceImage)
+
         
-        
-        generated_response = rag_pgvector.run_llm(
-                pgvector_retrieval = pgvector_retrieval,
-                query=prompt, chat_history=st.session_state["chat_history"]
-                )
+        # generated_response = rag_pgvector.run_llm(
+        #         pgvector_retrieval = pgvector_retrieval,
+        #         query=prompt, chat_history=st.session_state["chat_history"]
+        #         )
         
 
-        sources = set(
-            [os.path.basename(doc.metadata["source"]) for doc in generated_response["source_documents"]]
-        )
-        formatted_response = (
-            f"{generated_response['result']} \n {create_sources_string(sources)}"
-        )
+        # sources = set(
+        #     [os.path.basename(doc.metadata["source"]) for doc in generated_response["source_documents"]]
+        # )
+        # formatted_response = (
+        #     f"{generated_response['result']} \n {create_sources_string(sources)}"
+        # )
 
-        st.session_state.chat_history.append((prompt, generated_response["result"]))
-        st.session_state.user_prompt_history.append(prompt)
-        st.session_state.chat_answers_history.append(formatted_response)
+        # st.session_state.chat_history.append((prompt, generated_response["result"]))
+        # st.session_state.user_prompt_history.append(prompt)
+        # st.session_state.chat_answers_history.append(formatted_response)
 
-if st.session_state["chat_answers_history"]:
-    for generated_response, user_query in zip(
-        st.session_state["chat_answers_history"],
-        st.session_state["user_prompt_history"],
-    ):
-        message(
-            user_query,
-            is_user=True,
-        )
-        message(generated_response)
+# if st.session_state["chat_answers_history"]:
+#     for generated_response, user_query in zip(
+#         st.session_state["chat_answers_history"],
+#         st.session_state["user_prompt_history"],
+#     ):
+    # message(
+    #     prompt,
+    #     is_user=True,
+    # )
+    message(f"{generated_response}")
+    st.header = f"source: {sourceImage}"
