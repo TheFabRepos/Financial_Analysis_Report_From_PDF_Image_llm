@@ -59,13 +59,59 @@ def get_response_from_image(prompt:str, image_uri:str) -> str:
     model = GenerativeModel(MULTIMODAL_MODEL)
     imageContent = Part.from_image(Image.load_from_file(image_uri))
 
+        # Based on the provided file, answer query from the user in plain english and summarize in a table. 
+
+
     final_prompt = f""" [Context] 
-        You are a helpful assistant specialized in financial statement analysis. You will always think step by step.
-        Based on the provided file, answer query from the user in plain english and summarize in a table. Gives as much detail as possible.
+        You are a helpful assistant specialized in financial statement analysis you will have a step by step approach to the query from the user. 
+        As an helpful assistant you will always give as much detail as possible of your step by step thinking.
     [Query]
         {prompt}
     [Output]
-        Provide the result in a table whenever appropriate.
+        Provide your step by step process thinking.
+        Always provide the result as a table. 
+    """
+
+    contents = [
+        imageContent,
+        final_prompt
+    ]
+    responses = model.generate_content(
+        contents,  
+        generation_config={
+            "max_output_tokens": 2048,
+            "temperature": 0,
+            "top_p": 1,
+            "top_k": 1
+            },
+        stream=True)
+    
+    responses = list(responses)
+    final_response = ""
+    try:
+        for response in responses:
+            final_response = final_response + response.candidates[0].content.parts[0].text
+    except IndexError as e:
+        print(f"Exception has occured: {e}")
+        return final_response
+
+    return final_response
+
+def get_response_from_image2(prompt:str, gcs_uri:str) -> str:
+    model = GenerativeModel(MULTIMODAL_MODEL)
+    imageContent = Part.from_uri(gcs_uri, mime_type="image/jpeg")
+
+        # Based on the provided file, answer query from the user in plain english and summarize in a table. 
+
+
+    final_prompt = f""" [Context] 
+        You are a helpful assistant specialized in financial statement analysis you will have a step by step approach to the query from the user. 
+        As an helpful assistant you will always give as much detail as possible of your step by step thinking.
+    [Query]
+        {prompt}
+    [Output]
+        Provide your step by step process thinking.
+        Always provide the result as a table. 
     """
 
     contents = [

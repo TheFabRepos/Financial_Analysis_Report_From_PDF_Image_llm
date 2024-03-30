@@ -1,7 +1,7 @@
 import streamlit as st
 
 from pdf_engineering import pdf_table_to_img
-from generic_helper import filesystem_helper, config_helper
+from generic_helper import filesystem_helper, config_helper, gcs_helper
 
 from llm_infer import multimodal_infer
 from streamlit_js_eval import streamlit_js_eval
@@ -18,6 +18,12 @@ def process_file():
     logtxtbox.write("") 
     progressbar = st.progress(0, text = "")
 
+    ### Reading properties from config.ini
+    BQ_PROJECT_ID = config_helper.get_config_value ("GENERAL", "project_id")
+    BQ_DS_NAME = config_helper.get_config_value ("GENERAL", "bq_ds_name")
+    REGION = config_helper.get_config_value ("GENERAL", "region_ds")
+    BUCKET_NAME = config_helper.get_config_value ("GENERAL", "cloud_storage")
+
     with st.spinner(text = f"Searching page(s) with table(s) in {st.session_state.filename_with_extension}..."):
       list_page_table = pdf_table_to_img.list_table_in_pdf_from_file(f"{st.session_state.temp_directory}/{st.session_state.filename_with_extension}")
       logtxtbox.write(f"##### {len(list_page_table)} pages containing tables found in {st.session_state.filename_with_extension}...") 
@@ -28,16 +34,13 @@ def process_file():
     progressbar.progress(0.5, text = "Pages in PDF file has been converted to images ...")
     
     ### Save the page with table in the PDF files as image ###
-    with st.spinner(text = "Convert images of pages with table to jpeg file..."):
+    with st.spinner(text = "Convert images of pages with table to jpeg file and upload to GCS..."):
       for count, page in enumerate(list_page_table):
         pdf_table_to_img.convert_ppm_to_file (list_images[page], f"{st.session_state.temp_directory}/images/page_{page}.jpg")
+        gcs_helper.upload_file_to_GCS(BUCKET_NAME, f"{st.session_state.collection_name}", f"{st.session_state.temp_directory}/images/page_{page}.jpg")
         progressbar.progress((0.5 + (count/len(list_page_table))*0.25) , text = "Saving tables found in PDF file to jpg...")
 
-
     ### Getting the embedding_store to store the vectors
-    BQ_PROJECT_ID = config_helper.get_config_value ("GENERAL", "project_id")
-    BQ_DS_NAME = config_helper.get_config_value ("GENERAL", "bq_ds_name")
-    REGION = config_helper.get_config_value ("GENERAL", "region_ds")
     embedding_store = bq_embedding.create_embedding_collection(BQ_PROJECT_ID, BQ_DS_NAME, st.session_state.collection_name ,REGION)
 
     ### Extract JSON from the table in images ###
@@ -49,6 +52,7 @@ def process_file():
     with st.spinner(text = "Extract json from image and embed it..."):
       for count, file in enumerate(dir_list):
           json_values.append (multimodal_infer.extract_table_to_json_from_image(f"{st.session_state.temp_directory}/images/{file}"))
+          
           #metadatas.append (f"{st.session_state.temp_directory}/images/{file}")
           metadatas.append (f"{file}")
           # Calculate and store embedding every 10 inferences (we don't want to risk a OOM)

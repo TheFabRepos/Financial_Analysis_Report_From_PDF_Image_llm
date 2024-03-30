@@ -15,7 +15,7 @@ def similarity_search(bq_project_id, bq_ds_name, collection_name, query, k) -> s
                 (SELECT '{query}' AS content))
         ), top_k => {k})"""
 
-    print (querySimilarity)
+    # print (querySimilarity)
 
     query_job = client.query(querySimilarity)
 

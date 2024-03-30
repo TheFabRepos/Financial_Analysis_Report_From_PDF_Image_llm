@@ -1,11 +1,21 @@
-from generic_helper import config_helper
+from generic_helper import config_helper, gcs_helper
 from embedding_core import bq_embedding
 from langchain_community.vectorstores import BigQueryVectorSearch
 from langchain_google_vertexai import VertexAIEmbeddings
 from langchain.vectorstores.utils import DistanceStrategy
+from google.cloud import storage
+from llm_infer import multimodal_infer
 
 
 if __name__== "__main__":
+
+    # storage_client = storage.Client()
+    # bucket_client = storage_client.get_bucket ("fab_financial_statement")
+    # blob = bucket_client.blob('test_embed/page_102.jpg')
+    # blob.upload_from_filename('/home/afabrice/fs_bq_embedding_modal_llm/tmp_2022-alphabet-annual-report_202403282009/images/page_102.jpg')
+
+    # print (storage_client)
+
     # collection_name:int =config_helper.get_config_value ("COLLECTION", "name")
     # collection_name_list:list[str] = collection_name.split(",")
     # collection_name_list = [i for i in collection_name_list if i]
@@ -22,6 +32,7 @@ if __name__== "__main__":
     # If collection already exists it will return a handle to the store
     # embedding_store = bq_embedding.create_embedding_collection(BQ_PROJECT_ID, BQ_DS_NAME, "second_embedding_fab" ,REGION)
 
+    print(multimodal_infer.get_response_from_image2("Revenue 2021", "gs://fab_financial_statement/fs_embed/page_34.jpg"))
 
     embedding = VertexAIEmbeddings(
         model_name="textembedding-gecko@latest", project=BQ_PROJECT_ID
