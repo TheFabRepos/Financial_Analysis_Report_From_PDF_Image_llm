@@ -1,7 +1,6 @@
 import streamlit as st
 from generic_helper import config_helper
-import os
-
+from global_variable import global_scope
 
 st.set_page_config(
     page_title="Main Page",
@@ -24,4 +23,4 @@ st.subheader("Please select one collection:")
 options = get_list_collectiom()
 st.session_state.choice_collection = st.radio("", options)
 
-st.text_input("Your choice:", value=st.session_state.choice_collection, disabled=True)
+global_scope.COLLECTION_NAME = st.text_input("Your choice:", value=st.session_state.choice_collection, disabled=True)

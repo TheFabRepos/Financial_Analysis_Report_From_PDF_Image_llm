@@ -1,13 +1,10 @@
 import streamlit as st
-
 from pdf_engineering import pdf_table_to_img
 from generic_helper import filesystem_helper, config_helper, gcs_helper
-
 from llm_infer import multimodal_infer
 from streamlit_js_eval import streamlit_js_eval
-
-import json
 from embedding_core import bq_embedding
+from global_variable import global_scope
 import time
 import os
 
@@ -37,7 +34,7 @@ def process_file():
     with st.spinner(text = "Convert images of pages with table to jpeg file and upload to GCS..."):
       for count, page in enumerate(list_page_table):
         pdf_table_to_img.convert_ppm_to_file (list_images[page], f"{st.session_state.temp_directory}/images/page_{page}.jpg")
-        gcs_helper.upload_file_to_GCS(BUCKET_NAME, f"{st.session_state.collection_name}", f"{st.session_state.temp_directory}/images/page_{page}.jpg")
+        gcs_helper.upload_file_to_GCS(f"{st.session_state.collection_name}", f"{st.session_state.temp_directory}/images/page_{page}.jpg")
         progressbar.progress((0.5 + (count/len(list_page_table))*0.25) , text = "Saving tables found in PDF file to jpg...")
 
     ### Getting the embedding_store to store the vectors
@@ -62,12 +59,13 @@ def process_file():
               metadatas.clear ()
           progressbar.progress((0.75 + (count/len(dir_list))*0.25) , text = "Extracting and embedding JSON...")
 
-    ### Write the configuration to config file
+    ### Write the configuration to config file and set global variable to the new collection name.
     collection_name =config_helper.get_config_value ("COLLECTION", "name")
     if (collection_name is None) or  (st.session_state.collection_name not in collection_name):
         collection_name = f"{st.session_state.collection_name},{collection_name} "
         config_helper.write_config("COLLECTION", "name", collection_name)
     config_helper.write_config("COLLECTION", st.session_state.collection_name, st.session_state.temp_directory)
+    global_scope.COLLECTION_NAME = st.session_state.collection_name
 
     # Evertything is success, we celabrate
     st.snow()

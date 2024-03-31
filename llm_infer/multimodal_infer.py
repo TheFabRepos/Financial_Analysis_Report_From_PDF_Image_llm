@@ -108,6 +108,7 @@ def get_response_from_image2(prompt:str, gcs_uri:str) -> str:
     final_prompt = f""" [Context] 
         You are a helpful assistant specialized in financial statement analysis you will have a step by step approach to the query from the user. 
         As an helpful assistant you will always give as much detail as possible of your step by step thinking.
+        You will only answer the query based on the image and you will never make up information, if the image does not provide the total context just provide answers available in the image.
     [Query]
         {prompt}
     [Output]

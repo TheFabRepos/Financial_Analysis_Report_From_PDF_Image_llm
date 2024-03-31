@@ -80,7 +80,7 @@ def get_url_from_file_GCS (directory, file_name):
     blob = BUCKET_CLIENT_FOR_SIGNED_URL.blob(f"{directory}/{file_name}") # name of file to be saved/uploaded to storage
     signed_URL = blob.generate_signed_url(
         version='v4',
-        expiration=datetime.timedelta(minutes=1),
+        expiration=datetime.timedelta(minutes=5),
         method='GET') 
 
     return signed_URL
