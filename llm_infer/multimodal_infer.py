@@ -55,12 +55,13 @@ def extract_table_to_json_from_image(image_uri:str) -> str:
 
     return final_response
 
-def get_response_from_image(prompt:str, image_uri:str) -> str:
+def get_response_from_image(prompt:str, gcs_uri:str) -> str:
     model = GenerativeModel(MULTIMODAL_MODEL)
-    imageContent = Part.from_image(Image.load_from_file(image_uri))
+    # imageContent = Part.from_image(Image.load_from_file(image_uri))
 
         # Based on the provided file, answer query from the user in plain english and summarize in a table. 
 
+    imageContent = Part.from_uri(gcs_uri, mime_type="image/jpeg")
 
     final_prompt = f""" [Context] 
         You are a helpful assistant specialized in financial statement analysis you will have a step by step approach to the query from the user. 

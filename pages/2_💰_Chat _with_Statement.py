@@ -27,10 +27,8 @@ def create_sources_string(source_urls: Set[str]) -> str:
 ### Getting the embedding_store to query against vector store
 BQ_PROJECT_ID = config_helper.get_config_value ("GENERAL", "project_id")
 BQ_DS_NAME = config_helper.get_config_value ("GENERAL", "bq_ds_name")
-REGION = config_helper.get_config_value ("GENERAL", "region_ds")
 COLLECTION_NAME = "fs_embed"
-PATH = config_helper.get_config_value ("COLLECTION", f"{COLLECTION_NAME}")
- 
+CLOUD_STORAGE = config_helper.get_config_value("GENERAL", "cloud_storage") 
 
 st.header("Chat with your statement 💰 - Helper Bot")
 # if (
@@ -48,8 +46,9 @@ prompt = st.text_input("Prompt", placeholder="Enter your message here...") or st
 if prompt:
     with st.spinner("Generating response..."):
 
-        sourceImage = f"{PATH}/images/{bq_similarity.similarity_search(BQ_PROJECT_ID, BQ_DS_NAME, COLLECTION_NAME, prompt, 1)}"
+        sourceImage = f"gs://{CLOUD_STORAGE}/{COLLECTION_NAME}/{bq_similarity.similarity_search(BQ_PROJECT_ID, BQ_DS_NAME, COLLECTION_NAME, prompt, 1)}"
         generated_response = multimodal_infer.get_response_from_image(prompt, sourceImage)
 
     message (f"{generated_response}")
-    st.chat_message("assistant", avatar="ℹ️").write(gcs_helper.get_url_from_file_GCS(COLLECTION_NAME,sourceImage.split('/')[-1]))
+    # st.chat_message("assistant", avatar="ℹ️").write(f"source: /n {gcs_helper.get_url_from_file_GCS(COLLECTION_NAME,sourceImage.split('/')[-1])}")
+    st.chat_message("assistant", avatar="ℹ️").markdown(f"**Source:** [{sourceImage.split('/')[-1]}]({gcs_helper.get_url_from_file_GCS(COLLECTION_NAME,sourceImage.split('/')[-1])})")
